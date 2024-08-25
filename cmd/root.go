@@ -6,9 +6,10 @@ import (
 	"github.com/motivewc/wowpatch/internal/binary"
 	"github.com/motivewc/wowpatch/internal/patterns"
 	"github.com/motivewc/wowpatch/internal/platform"
-	"os"
-
+	"github.com/motivewc/wowpatch/internal/trinity"
 	"github.com/spf13/cobra"
+	"os"
+	"path/filepath"
 )
 
 type RootOptions struct {
@@ -28,28 +29,43 @@ var rootCmd = &cobra.Command{
 	Long: `This application takes as input a retail World of Warcraft client and will generate a modified executable
 from it by using binary patching. The resulting executable can be run safely and connect to private servers.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		data, err := os.ReadFile(options.WarcraftExeLocation)
 		if err != nil {
 			return fmt.Errorf("unable to read the WoW executable file: %w", err)
 		}
-		binary.Patch(&data, patterns.PortalPattern, patterns.PortalReplace)
-		binary.Patch(&data, patterns.ConnectToModulusPattern, patterns.TrinityRsaModulus)
-		binary.Patch(&data, patterns.CryptoEdPublicKeyPattern, patterns.TrinityCryptoEdPublicKey)
+		binary.Patch(&data, patterns.PortalPattern, patterns.PortalPattern.Empty())
+		binary.Patch(&data, patterns.ConnectToModulusPattern, trinity.RsaModulus)
+		binary.Patch(&data, patterns.CryptoEdPublicKeyPattern, trinity.CryptoEd25519PublicKey)
 
-		if err = os.Remove(options.OutputFile); !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("unable to remove file that already exists at %v: %w", options.OutputFile, err)
-		}
-
-		err = os.WriteFile(options.OutputFile, data, 0777)
+		wd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("unable to write to file %v: %w", options.OutputFile, err)
+			return fmt.Errorf("unable to determine current working directory: %w", err)
 		}
 
-		fmt.Printf("Client has been successfully patched and saved to %v\n", options.OutputFile)
+		file, err := filepath.Abs(options.OutputFile)
+		if err != nil {
+			return fmt.Errorf("invalid output file path specified: %w", err)
+		}
+
+		if err = os.Remove(file); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("unable to remove file that already exists at %v: %w", file, err)
+		}
+
+		err = os.WriteFile(file, data, 0777)
+		if err != nil {
+			return fmt.Errorf("unable to write to file %v: %w", file, err)
+		}
+
+		if options.StripCodesignAttributes {
+			if err = platform.RemoveCodesigningSignature(file); err != nil {
+				return fmt.Errorf("unable to remove codesigning signature from %v: %w", file, err)
+			}
+		}
+		relativePath, _ := filepath.Rel(wd, file)
+
+		fmt.Printf("Client has been successfully patched and saved to \"%v\".\n", relativePath)
 
 		return nil
-
 	},
 }
 
@@ -66,6 +82,8 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&options.WarcraftExeLocation, "warcraft-exe", platform.FindWarcraftClientExecutable(), "the location of the WoW executable")
-	rootCmd.PersistentFlags().BoolVar(&options.StripCodesignAttributes, "strip-binary-codesign", true, "removes macOS codesigning from resulting binary")
+	rootCmd.Example = "wowpatch -l ./your/wow/exe -o ./patched-exe"
+	rootCmd.PersistentFlags().StringVarP(&options.OutputFile, "output-file", "o", "Arctium", "where to output a modified client")
+	rootCmd.PersistentFlags().StringVarP(&options.WarcraftExeLocation, "warcraft-exe", "l", platform.FindWarcraftClientExecutable(), "the location of the WoW executable")
+	rootCmd.PersistentFlags().BoolVarP(&options.StripCodesignAttributes, "strip-binary-codesign", "s", true, "removes macOS codesigning from resulting binary")
 }

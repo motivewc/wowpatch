@@ -1,7 +1,6 @@
 package binary
 
 import (
-	"fmt"
 	"log/slog"
 	"slices"
 )
@@ -12,6 +11,10 @@ We use an int16 type so that we can represent -1 as a wildcard search, and a val
 encompass the values [-1, 255].
 */
 type Pattern []int16
+
+func (p *Pattern) Empty() []byte {
+	return make([]byte, len(*p))
+}
 
 func StringToPattern(s string) Pattern {
 	p := make(Pattern, len(s))
@@ -35,7 +38,6 @@ func Patch(in *[]byte, find Pattern, replace []byte) {
 			slog.Debug("found pattern", "offset", i)
 			for j := i; j < i+len(replace); j++ {
 				(*in)[j] = replace[j-i]
-				fmt.Println(replace[j-i])
 			}
 		}
 	}

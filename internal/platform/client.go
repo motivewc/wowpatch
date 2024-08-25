@@ -18,6 +18,7 @@ func FindWarcraftClientExecutable() string {
 			"World of Warcraft.app",
 			"Contents",
 			"MacOS",
+			"World of Warcraft",
 		)
 	}
 	return ""
