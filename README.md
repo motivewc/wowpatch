@@ -1,7 +1,7 @@
 # wowpatch
 It's yet another WoW client patcher, but this time written in Go in order to maximize cross-platform
-compatibility, and without any in-client memory modifications. This means that each you can generate
-an executable and redistribute it to others as long as they use the same operating system and processor
+compatibility, and without any in-client memory modifications. This means that you can generate
+a single patched client and redistribute it to others as long as they use the same operating system and processor
 architecture.
 
 ## Who can use this?
@@ -12,6 +12,8 @@ in your system trust store.
 1. are connecting to a server that uses the same [gamecrypto key](https://github.com/TrinityCore/TrinityCore/blob/343f637435cc97ddedd725945cbad417c8f14391/src/server/game/Server/Packets/AuthenticationPackets.cpp#L221) as what is hardcoded (so basically, TrinityCore)
 
 ## Usage
+If you are an advanced user, the below will likely make sense to you. In case you need additional guidance, see either our [single player](guides/singleplayer.md) or [multiplayer](guides/multiplayer.md) guide.
+
 ```bash
 ./wowpatch -h
 This application takes as input a retail World of Warcraft client and will generate a modified executable
